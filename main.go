@@ -6,7 +6,10 @@ import (
 
 	ui "github.com/gizak/termui"
 	box "github.com/nsf/termbox-go"
+	"github.com/phoenix-io/phoenix-mon/plugins"
+	_ "github.com/phoenix-io/phoenix-mon/plugins/oci"
 )
+
 
 func main() {
 	err := ui.Init()
@@ -19,6 +22,9 @@ func main() {
 
 	header := createHeader("-- Phoenix Dashboard --")
 	footer := createFooterBar()
+
+	plugin, _ := plugin.NewPlugin("oci")
+	plugin.GetProcessList()
 
 	paintScreen := func() {
 		ui.Render(header, footer)
