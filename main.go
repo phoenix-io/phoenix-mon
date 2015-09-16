@@ -1,15 +1,10 @@
 package main
 
 import (
-	_ "fmt"
-	"time"
-
 	ui "github.com/gizak/termui"
-	box "github.com/nsf/termbox-go"
 	"github.com/phoenix-io/phoenix-mon/plugins"
 	_ "github.com/phoenix-io/phoenix-mon/plugins/oci"
 )
-
 
 func main() {
 	err := ui.Init()
@@ -24,10 +19,26 @@ func main() {
 	footer := createFooterBar()
 
 	plugin, _ := plugin.NewPlugin("oci")
-	plugin.GetProcessList()
+	plist, _ := plugin.GetProcessList()
+
+	pls := createProcessList(plist)
+
+	ui.Body.AddRows(
+		ui.NewRow(
+			ui.NewCol(12, 5, header)),
+		ui.NewRow(
+			ui.NewCol(6, 0, pls)),
+		ui.NewRow(
+			ui.NewCol(12, 0, footer)),
+	)
+
+	ui.Body.Align()
+	ui.Render(ui.Body)
 
 	paintScreen := func() {
-		ui.Render(header, footer)
+		ui.Body.Width = ui.TermWidth()
+		ui.Body.Align()
+		ui.Render(ui.Body)
 	}
 
 	evt := ui.EventCh()
@@ -37,32 +48,35 @@ func main() {
 			if e.Ch == 'q' {
 				return
 			}
-		default:
-			box.Sync()
-			paintScreen()
-			time.Sleep(time.Second)
+			if e.Type == ui.EventResize {
+				go paintScreen()
+			}
 		}
 	}
 }
 
-func createHeader(msg string) *ui.Par {
+func createProcessList(plist []plugin.Process) *ui.List {
+	ls := ui.NewList()
 
-	w, _ := box.Size()
+	for _, p := range plist {
+		ls.Items = append(ls.Items, p.Name)
+	}
+	ls.ItemFgColor = ui.ColorYellow
+	ls.Border.Label = "Process List"
+	ls.Height = 10
+	return ls
+}
+
+func createHeader(msg string) *ui.Par {
 	p := ui.NewPar(msg)
 	p.HasBorder = false
 	p.Height = 3
-	p.Width = len(msg)
-	p.Y = 0
-	p.X = w/2 - len(msg)/2
 	return p
 }
 
 func createFooterBar() *ui.Par {
-	_, h := box.Size()
 	footer := ui.NewPar("press 'q' to quit")
 	footer.Height = 3
-	footer.Width = 20
-	footer.Y = h - 3
 
 	return footer
 }
