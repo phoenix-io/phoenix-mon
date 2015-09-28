@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	ui "github.com/gizak/termui"
 	"github.com/phoenix-io/phoenix-mon/plugins"
 	_ "github.com/phoenix-io/phoenix-mon/plugins/oci"
 )
 
 func main() {
+
+	var memStat []float64
 	err := ui.Init()
 	if err != nil {
 		panic(err)
@@ -18,16 +21,25 @@ func main() {
 	header := createHeader("-- Phoenix Dashboard --")
 	footer := createFooterBar()
 
-	plugin, _ := plugin.NewPlugin("oci")
-	plist, _ := plugin.GetProcessList()
+	p, _ := plugin.NewPlugin("oci")
+	procList := processList(p)
+	pls := createProcessList(procList)
 
-	pls := createProcessList(plist)
+	plist, _ := p.GetProcessList()
+	for _, pl := range plist {
 
+		memStat = append(memStat, processMemory(p, pl))
+		break
+	}
+	memWidget := createProcessMemoryWidget(memStat)
+
+	// Adjust widgets on screen
 	ui.Body.AddRows(
 		ui.NewRow(
 			ui.NewCol(12, 5, header)),
 		ui.NewRow(
-			ui.NewCol(6, 0, pls)),
+			ui.NewCol(3, 0, pls),
+			ui.NewCol(4, 0, memWidget)),
 		ui.NewRow(
 			ui.NewCol(12, 0, footer)),
 	)
@@ -38,6 +50,15 @@ func main() {
 	paintScreen := func() {
 		ui.Body.Width = ui.TermWidth()
 		ui.Body.Align()
+		pls.Items = processList(p)
+		plist, _ := p.GetProcessList()
+		for _, pl := range plist {
+
+			memStat = append(memStat, processMemory(p, pl))
+			break
+		}
+		memStat = []float64{1,2,3,4,5,6,7,8,9,8,7,6,4,3,5,7,9,4,3,2,4,3}
+		memWidget.Data = memStat
 		ui.Render(ui.Body)
 	}
 
@@ -55,28 +76,20 @@ func main() {
 	}
 }
 
-func createProcessList(plist []plugin.Process) *ui.List {
-	ls := ui.NewList()
-
+func processList(p plugin.Plugin) []string {
+	var processList []string
+	plist, _ := p.GetProcessList()
 	for _, p := range plist {
-		ls.Items = append(ls.Items, p.Name)
+		name := fmt.Sprintf("%s", p.Name)
+		processList = append(processList, name)
 	}
-	ls.ItemFgColor = ui.ColorYellow
-	ls.Border.Label = "Process List"
-	ls.Height = 10
-	return ls
+
+	return processList
 }
 
-func createHeader(msg string) *ui.Par {
-	p := ui.NewPar(msg)
-	p.HasBorder = false
-	p.Height = 3
-	return p
-}
+func processMemory(p plugin.Plugin, process plugin.Process) float64 {
 
-func createFooterBar() *ui.Par {
-	footer := ui.NewPar("press 'q' to quit")
-	footer.Height = 3
-
-	return footer
+	p.GetProcessStat(process)
+	return 6
+	//return float64(mem.Memory)
 }

@@ -10,6 +10,7 @@ import (
 
 type OCI struct {
 	process []plugin.Process
+	count	int
 }
 
 type PState struct {
@@ -25,7 +26,7 @@ func NewPlugin(pluginName string) (plugin.Plugin, error) {
 	return &OCI{}, nil
 }
 
-func (p OCI) GetProcessList() ([]plugin.Process, error) {
+func (p *OCI) GetProcessList() ([]plugin.Process, error) {
 
 	var state PState
 	containers, _ := ioutil.ReadDir("/run/oci/")
@@ -37,13 +38,16 @@ func (p OCI) GetProcessList() ([]plugin.Process, error) {
 		}
 
 		json.Unmarshal(data, &state)
-		p.process = append(p.process, plugin.Process{Pid: state.Pid, Name: state.ID})
+		name := fmt.Sprintf("%s %d",state.ID,p.count)
+		//fmt.Println(name)
+		p.count++
+		p.process = append(p.process, plugin.Process{Pid: state.Pid, Name: name})
 	}
 
 	return p.process, nil
 }
 
-func (p OCI) GetProcessStat(process plugin.Process) (plugin.Process, error) {
+func (p *OCI) GetProcessStat(process plugin.Process) (plugin.Process, error) {
 	res, err := ps.NewProcess(int32(process.Pid))
 	if err != nil {
 		fmt.Println("Unable to Create Process Object")
